@@ -1,13 +1,19 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
-from app.core.database import get_db
-from app.services.schedule_generator import ScheduleGeneratorService
-from app import models, schemas
+from fastapi import FastAPI
+from app.routers import people
+from app.core.database import Base, engine
 
-router = APIRouter(prefix="/schedules", tags=["schedules"])
+# Cria as tabelas do banco
+Base.metadata.create_all(bind=engine)
 
-@router.post("/generate", response_model=schemas.ScheduleResponse)
-def generate_schedule(db: Session = Depends(get_db)):
-    people = db.query(models.Person).all()
-    days = db.query(models.Day).all()
-    
+app = FastAPI(
+    title="Gestão de Escalas da Igreja",
+    description="API para gerenciamento de escalas de ministérios",
+    version="1.0.0",
+)
+
+# Inclui as rotas
+app.include_router(people.router)
+
+@app.get("/")
+def root():
+    return {"message": "API de Escalas da Igreja está rodando 🚀"}
