@@ -7,21 +7,6 @@ from app.schemas import person_schema
 
 router = APIRouter(prefix="/people", tags=["people"])
 
-@router.post("/", response_model=person_schema.PersonResponse)
-def create_person(person: person_schema.PersonCreate, db: Session = Depends(get_db)):
-    avaliability_objs =[
-        Availability(**a.dict()) for a in person.availability
-    ]
-
-    new_person = person.Person(
-        name=person.name,
-        last_name=person.last_name,
-        availability=avaliability_objs
-    )
-    db.add(new_person)
-    db.commit()
-    db.refresh(new_person)
-    return new_person
 
 @router.put("/{person_id}", response_model=person_schema.PersonResponse)
 def update_person(person_id: int, new_person: person_schema.PersonResponse, db: Session = Depends(get_db)):

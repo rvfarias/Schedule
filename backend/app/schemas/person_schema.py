@@ -12,6 +12,7 @@ class PersonCreate(PersonBase):
 
 class PersonResponse(PersonBase):
     id: int
+    schedule_id: int
 
     class Config:
         orm_mode = True
