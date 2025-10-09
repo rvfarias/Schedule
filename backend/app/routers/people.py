@@ -2,13 +2,22 @@ from fastapi  import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.models import person as models
+from app.models.availability import Availability
 from app.schemas import person_schema as schemas
 
 router = APIRouter(prefix="/people", tags=["people"])
 
 @router.post("/", response_model=schemas.PersonResponse)
 def create_person(person: schemas.PersonCreate, db: Session = Depends(get_db)):
-    new_person = models.Person(**person.dict())
+    avaliability_objs =[
+        Availability(**a.dict()) for a in person.availability
+    ]
+
+    new_person = models.Person(
+        name=person.name,
+        last_name=person.last_name,
+        availability=avaliability_objs
+    )
     db.add(new_person)
     db.commit()
     db.refresh(new_person)

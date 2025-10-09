@@ -1,10 +1,11 @@
 from pydantic import BaseModel
 from typing import List
+from .availability_schema import Availability
 
 class PersonBase(BaseModel):
     name: str
     last_name: str
-    availability: List[int]  # JSON string representing availability
+    availability: List[Availability]  # JSON string representing availability
 
 class PersonCreate(PersonBase):
     pass
