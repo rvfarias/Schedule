@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.models import schedule as schedule_model
-from app.schemas import schedule_schema
-from app.models import person
+from app.models.schedule import Schedule
+from app.models.person import Person
 from app.models.availability import Availability
+from app.schemas import schedule_schema
+
 
 router = APIRouter(prefix="/schedules", tags=["schedules"])
 
@@ -23,14 +24,14 @@ def create_schedule(schedule: schedule_schema.ScheduleCreate, db: Session = Depe
     people_objs = []
     for person_data in schedule.people:
         availability_objs = [Availability(**a.dict()) for a in person_data.availability]
-        person_obj = person.Person(
+        person_obj = Person(
             name=person_data.name,
             last_name=person_data.last_name,
             availability=availability_objs
         )
         people_objs.append(person_obj)
         
-    new_schedule = schedule_model.Schedule(
+    new_schedule = Schedule(
         month=schedule.month,
         year=schedule.year,
         people=people_objs
@@ -44,9 +45,12 @@ def create_schedule(schedule: schedule_schema.ScheduleCreate, db: Session = Depe
 
 @router.get("/", response_model=list[schedule_schema.ScheduleResponse])
 def list_schedules(db: Session = Depends(get_db)):
-    return db.query(schedule_model.Schedule).all()
+    return db.query(Schedule).all()
 
 @router.get("/{schedule_id}", response_model=schedule_schema.ScheduleResponse)
 def get_schedule(schedule_id: int, db: Session = Depends(get_db)):
-    return db.query(schedule_model.Schedule).filter(schedule_model.Schedule.id == schedule_id).first()
+    if not schedule_id:
+        return HTTPException(status_code=400, detail="Invalid schedule ID")
+    
+    return db.query(Schedule).filter(Schedule.id == schedule_id).first()
 
