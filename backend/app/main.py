@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from app.routers import people
+from app.routers import schedules
 from app.core.database import Base, engine
 
 # Cria as tabelas do banco
@@ -13,6 +14,7 @@ app = FastAPI(
 
 # Inclui as rotas
 app.include_router(people.router)
+app.include_router(schedules.router)
 
 @app.get("/")
 def root():
