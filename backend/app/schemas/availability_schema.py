@@ -1,14 +1,14 @@
 from pydantic import BaseModel
 from typing import List
 
-class Availability(BaseModel):
+class AvailabilityBase(BaseModel):
     day: int  # 0=Sunday, 1=Monday, ..., 6=Saturday
     period: List[str]  # e.g., "morning", "afternoon", "evening"
 
-class AvailabilityCreate(Availability):
+class AvailabilityCreate(AvailabilityBase):
     pass
 
-class AvailabilityResponse(Availability):
+class AvailabilityResponse(AvailabilityBase):
     id: int
     person_id: int
 
