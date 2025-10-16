@@ -10,7 +10,7 @@ class ScheduleBase(BaseModel):
     year: int
     max_period_per_person: int
     people: List[PersonBase]
-    assignments: List[AssignmentBase]
+    assignments: List[AssignmentBase] | None = []
 
 
 class ScheduleCreate(ScheduleBase):
