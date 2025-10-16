@@ -3,7 +3,9 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.models.schedule import Schedule
 from app.models.person import Person
+from app.models.schedule_day import ScheduleDay
 from app.models.availability import Availability
+from app.models.assignment import Assignment
 from app.schemas import schedule_schema
 
 
@@ -21,6 +23,15 @@ def create_schedule(schedule: schedule_schema.ScheduleCreate, db: Session = Depe
     Returns:
         schedule.Schedule: The newly created schedule object.
     """
+    days_objs = []
+    for d in schedule.days:
+        day_objs = ScheduleDay(
+            day=d.day,
+            people_per_period=d.people_per_period,
+            period=d.period
+        )
+        days_objs.append(day_objs)
+
     people_objs = []
     for person_data in schedule.people:
         availability_objs = [Availability(**a.dict()) for a in person_data.availability]
@@ -34,6 +45,8 @@ def create_schedule(schedule: schedule_schema.ScheduleCreate, db: Session = Depe
     new_schedule = Schedule(
         month=schedule.month,
         year=schedule.year,
+        max_period_per_person=schedule.max_period_per_person,
+        days=days_objs,
         people=people_objs
     )
 
