@@ -3,7 +3,7 @@ from typing import List
 
 class AvailabilityBase(BaseModel):
     day: int 
-    period: List[str]  # e.g., "morning", "afternoon", "evening"
+    period: List[str]  
 
 class AvailabilityCreate(AvailabilityBase):
     pass
