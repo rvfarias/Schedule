@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, JSON
 from sqlalchemy.orm import relationship
 from app.core.database import Base
 
@@ -9,7 +9,6 @@ class Schedule(Base):
     month = Column(String, nullable=False)
     year = Column(Integer, nullable=False)
     max_period_per_person = Column(Integer, nullable=False)
+    assignments = Column(JSON) # Armazena as atribuições como um campo JSON
     people = relationship("Person", back_populates="schedule")
     days = relationship("ScheduleDay", back_populates="schedule", cascade="all, delete-orphan")
-    assignments = relationship("Assignment", back_populates="schedule", cascade="all, delete-orphan")
-
