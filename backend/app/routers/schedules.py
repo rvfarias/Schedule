@@ -89,3 +89,13 @@ def get_schedule(schedule_id: int, db: Session = Depends(get_db)):
 
 @router.generate("/{schedule_id}/generate", response_model=schedule_schema.ScheduleResponse)
 def generate_schedule(schedule_id: int, db: Session = Depends(get_db)):
+    db_schedule = db.query(Schedule).filter(Schedule.id == schedule_id).first()
+    if not db_schedule:
+        raise HTTPException(status_code=404, detail="Schedule not found")
+    
+    assignment = generate_schedule_service(db_schedule.people, db_schedule.days, db_schedule.max_period_per_person)
+
+    db.query(Assignment).filter(Assignment.schedule_id == schedule_id).delete()
+    db.flush()
+    
+    

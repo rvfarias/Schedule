@@ -1,7 +1,6 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List, Dict
 from .person_schema import PersonBase
-from .assignment_schema import AssignmentBase
 from .schedule_day_schema import ScheduleDayBase
 
 class ScheduleBase(BaseModel):
@@ -10,7 +9,7 @@ class ScheduleBase(BaseModel):
     year: int
     max_period_per_person: int
     people: List[PersonBase]
-    assignments: List[AssignmentBase] | None = []
+    assignments: Dict[int, Dict[str, List[int]]] | None = None
 
 
 class ScheduleCreate(ScheduleBase):
