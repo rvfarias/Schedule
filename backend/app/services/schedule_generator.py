@@ -82,17 +82,31 @@ def generate_schedule(people, days, max_shifts_per_person):
     # resolve o modelo usando CBC (silencioso)
     model.solve(PULP_CBC_CMD(msg=False))
 
-    # extrai as atribuições com segurança (get varValue)
-    assignments = defaultdict(list)
+    # normaliza dia (tenta converter para int quando possível)
+    def _normalize_day(day_val):
+        try:
+            return int(day_val)
+        except Exception:
+            return day_val
+
+    # inicializa estrutura assignments como { dia: { periodo: [ids...] } }
+    assignments = {}
+    for d in days:
+        day_key = _normalize_day(d.get("day"))
+        assignments.setdefault(day_key, {})
+        for period in d.get("period", []):
+            assignments[day_key].setdefault(period, [])
+
+    # preenche assignments a partir das variáveis do modelo
     for v in volunteers:
         for s in shifts:
             val = getattr(X[v][s], "varValue", 0)
-            if val == 1:
+            if val and val >= 0.5:
                 day_str, period = s.split(maxsplit=1)
-                try:
-                    day_int = int(day_str)
-                except ValueError:
-                    day_int = day_str
-                assignments[v].append({"day": day_int, "period": period})
+                day_key = _normalize_day(day_str)
+                # garante chaves existam caso algum turno não estivesse na inicialização
+                assignments.setdefault(day_key, {})
+                assignments[day_key].setdefault(period, [])
+                assignments[day_key][period].append(v)
 
-    return dict(assignments)
+    return assignments
