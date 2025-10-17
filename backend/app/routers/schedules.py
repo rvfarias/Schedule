@@ -5,7 +5,6 @@ from app.models.schedule import Schedule
 from app.models.person import Person
 from app.models.schedule_day import ScheduleDay
 from app.models.availability import Availability
-from app.models.assignment import Assignment
 from app.schemas import schedule_schema
 from app.services.schedule_generator import generate_schedule as generate_schedule_service
 from app.services.id_to_name import convert_id_to_name
@@ -94,8 +93,11 @@ def generate_schedule(schedule_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Schedule not found")
     
     assignment = generate_schedule_service(db_schedule.people, db_schedule.days, db_schedule.max_period_per_person)
-
-    db.query(Assignment).filter(Assignment.schedule_id == schedule_id).delete()
-    db.flush()
+    db_schedule.assignments.clear()
+    db_schedule.assignments = assignment
+    db.commit()
+    db.refresh(db_schedule)
+    return db_schedule
+    
     
     
