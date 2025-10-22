@@ -51,33 +51,34 @@ def update_schedule(schedule_id: int, updated_schedule: schedule_schema.Schedule
     if not db_schedule:
         raise HTTPException(status_code=404, detail="Schedule not found")
     
+    # Update people and their availability
+    db_schedule.people.clear()
+    people_objs = []
+    for person_data in updated_schedule.people:
+        availability_objs = [Availability(**a.dict()) for a in person_data.availability]
+        person_obj = Person(
+            name=person_data.name,
+            last_name=person_data.last_name,
+            availability = availability_objs
+        )
+        people_objs.append(person_obj)
+    
+    db_schedule.people = people_objs
     db_schedule.month = updated_schedule.month
     db_schedule.year = updated_schedule.year
     db_schedule.max_period_per_person = updated_schedule.max_period_per_person
-    del db_schedule.days[:]
-    del db_schedule.people[:]
-    db.flush()
 
-    db_schedule.days = []
+
+    # Update days
+    db_schedule.days.clear()
     for d in updated_schedule.days:
         day_obj = ScheduleDay(**d.dict(), schedule_id=db_schedule.id)
         db_schedule.days.append(day_obj)
-
-    people_objs = []
-    for person_data in updated_schedule.people:
-        person_obj = Person(
-            name=person_data.name,
-            last_name=person_data.last_name
-        )
-        db.add(person_obj)
-        db.flush()  # Assigns an id to person_obj
-        availability_objs = [Availability(**a.dict(), person_id=person_obj.id) for a in person_data.availability]
-        person_obj.availability = availability_objs
-        people_objs.append(person_obj)
-        db_schedule.people = people_objs
+ 
     
     db.commit()
     db.refresh(db_schedule)
+
     return db_schedule
 
 @router.get("/", response_model=list[schedule_schema.ScheduleResponse])
