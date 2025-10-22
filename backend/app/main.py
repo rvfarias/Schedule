@@ -1,5 +1,4 @@
 from fastapi import FastAPI
-from app.routers import people
 from app.routers import schedules
 from app.core.database import Base, engine
 
@@ -13,7 +12,6 @@ app = FastAPI(
 )
 
 # Inclui as rotas
-app.include_router(people.router)
 app.include_router(schedules.router)
 
 @app.get("/")
