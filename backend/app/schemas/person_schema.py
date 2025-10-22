@@ -5,7 +5,7 @@ from .availability_schema import AvailabilityBase
 class PersonBase(BaseModel):
     name: str
     last_name: str
-    availability: List[AvailabilityBase]  # JSON string representing availability
+    availability: List[AvailabilityBase]  
 
 class PersonCreate(PersonBase):
     pass
@@ -15,4 +15,4 @@ class PersonResponse(PersonBase):
     schedule_id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
