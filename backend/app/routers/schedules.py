@@ -7,7 +7,6 @@ from app.models.schedule_day import ScheduleDay
 from app.models.availability import Availability
 from app.schemas import schedule_schema
 from app.services.schedule_generator import generate_schedule as generate_schedule_service
-from app.services.id_to_name import convert_id_to_name
 
 router = APIRouter(prefix="/schedules", tags=["schedules"])
 
@@ -26,12 +25,14 @@ def create_schedule(schedule: schedule_schema.ScheduleCreate, db: Session = Depe
 
     people_objs = []
     for person_data in schedule.people:
-        availability_objs = [Availability(**a.dict()) for a in person_data.availability]
         person_obj = Person(
             name=person_data.name,
-            last_name=person_data.last_name,
-            availability=availability_objs
+            last_name=person_data.last_name
         )
+        db.add(person_obj)
+        db.flush()  # Assigns an id to person_obj
+        availability_objs = [Availability(**a.dict(), person_id=person_obj.id) for a in person_data.availability]
+        person_obj.availability = availability_objs
         people_objs.append(person_obj)
         
     new_schedule = Schedule(
@@ -56,20 +57,27 @@ def update_schedule(schedule_id: int, updated_schedule: schedule_schema.Schedule
     db_schedule.month = updated_schedule.month
     db_schedule.year = updated_schedule.year
     db_schedule.max_period_per_person = updated_schedule.max_period_per_person
-    db_schedule.days.clear()
-    db_schedule.people.clear()
+    del db_schedule.days[:]
+    del db_schedule.people[:]
     db.flush()
 
-    db_schedule.days = [ScheduleDay(**d.dict()) for d in updated_schedule.days]
-    db_schedule.people = []
+    db_schedule.days = []
+    for d in updated_schedule.days:
+        day_obj = ScheduleDay(**d.dict(), schedule_id=db_schedule.id)
+        db_schedule.days.append(day_obj)
+
+    people_objs = []
     for person_data in updated_schedule.people:
-        availability_objs = [Availability(**a.dict()) for a in person_data.availability]
         person_obj = Person(
             name=person_data.name,
-            last_name=person_data.last_name,
-            availability=availability_objs
+            last_name=person_data.last_name
         )
-        db_schedule.people.append(person_obj)
+        db.add(person_obj)
+        db.flush()  # Assigns an id to person_obj
+        availability_objs = [Availability(**a.dict(), person_id=person_obj.id) for a in person_data.availability]
+        person_obj.availability = availability_objs
+        people_objs.append(person_obj)
+        db_schedule.people = people_objs
     
     db.commit()
     db.refresh(db_schedule)
@@ -86,18 +94,44 @@ def get_schedule(schedule_id: int, db: Session = Depends(get_db)):
     
     return db.query(Schedule).filter(Schedule.id == schedule_id).first()
 
-@router.generate("/{schedule_id}/generate", response_model=schedule_schema.ScheduleResponse)
+@router.post("/{schedule_id}/generate", response_model=schedule_schema.ScheduleResponse)
 def generate_schedule(schedule_id: int, db: Session = Depends(get_db)):
     db_schedule = db.query(Schedule).filter(Schedule.id == schedule_id).first()
     if not db_schedule:
         raise HTTPException(status_code=404, detail="Schedule not found")
     
-    assignment = generate_schedule_service(db_schedule.people, db_schedule.days, db_schedule.max_period_per_person)
-    db_schedule.assignments.clear()
-    db_schedule.assignments = assignment
+    people = db_schedule.people
+    days = db_schedule.days
+
+    schedule_data = schedule_schema.ScheduleBase(
+        days=[
+            {
+                "day": d.day,
+                "people_per_period": d.people_per_period,
+                "period": d.period
+            }for d in days
+        ]
+        ,
+        people=[
+            {
+                "name": p.name,
+                "last_name": p.last_name,
+                "availability": [
+                    {
+                        "day": a.day,
+                        "period": a.period
+                    } for a in p.availability
+                ]
+            } for p in people
+        ],
+        month=db_schedule.month,
+        year=db_schedule.year,
+        max_period_per_person=db_schedule.max_period_per_person
+    )
+
+    generated_schedule = generate_schedule_service(schedule_data)
+    db_schedule.assignments = generated_schedule
     db.commit()
     db.refresh(db_schedule)
+
     return db_schedule
-    
-    
-    
