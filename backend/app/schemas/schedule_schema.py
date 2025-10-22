@@ -1,15 +1,16 @@
 from pydantic import BaseModel
 from typing import List, Dict, Optional
-from .person_schema import PersonBase
-from .schedule_day_schema import ScheduleDayBase
+from app.schemas import person_schema
+from app.schemas import schedule_day_schema
+
 
 class ScheduleBase(BaseModel):
-    days: List[ScheduleDayBase]
+    days: List[schedule_day_schema.ScheduleDayBase]
     month: str
     year: int
     max_period_per_person: int
-    people: List[PersonBase]
-    assignments: Optional[Dict[int, Dict[str, List[str]]]] = None
+    people: List[person_schema.PersonBase]
+    assignments: Optional[Dict[int, Dict[str, List[int]]]] = None
 
 
 class ScheduleCreate(ScheduleBase):
@@ -17,6 +18,7 @@ class ScheduleCreate(ScheduleBase):
 
 class ScheduleResponse(ScheduleBase):
     id: int
+    people: List[person_schema.PersonResponse]
 
     class Config:
         """

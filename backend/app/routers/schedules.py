@@ -13,40 +13,37 @@ router = APIRouter(prefix="/schedules", tags=["schedules"])
 @router.post("/", response_model=schedule_schema.ScheduleResponse)
 def create_schedule(schedule: schedule_schema.ScheduleCreate, db: Session = Depends(get_db)):
     """Create a new schedule with nested days and people."""
-
-    days_objs = []
-    for d in schedule.days:
-        day_objs = ScheduleDay(
-            day=d.day,
-            people_per_period=d.people_per_period,
-            period=d.period
-        )
-        days_objs.append(day_objs)
-
-    people_objs = []
-    for person_data in schedule.people:
-        person_obj = Person(
-            name=person_data.name,
-            last_name=person_data.last_name
-        )
-        db.add(person_obj)
-        db.flush()  # Assigns an id to person_obj
-        availability_objs = [Availability(**a.dict(), person_id=person_obj.id) for a in person_data.availability]
-        person_obj.availability = availability_objs
-        people_objs.append(person_obj)
-        
-    new_schedule = Schedule(
+    db_schedule = Schedule(
         month=schedule.month,
         year=schedule.year,
-        max_period_per_person=schedule.max_period_per_person,
-        days=days_objs,
-        people=people_objs
+        max_period_per_person=schedule.max_period_per_person
     )
 
-    db.add(new_schedule)
+    # Add days
+    for d in schedule.days:
+        day_obj = ScheduleDay(**d.dict(), schedule_id=db_schedule.id)
+        db_schedule.days.append(day_obj)
+
+    # Add people and their availability
+    people_objs = []
+    for person_data in schedule.people:
+        availability_objs = [Availability(**a.dict()) for a in person_data.availability]
+        person_obj = Person(
+            name=person_data.name,
+            last_name=person_data.last_name,
+            availability = availability_objs
+
+        )
+        people_objs.append(person_obj)
+    
+    db_schedule.people = people_objs
+
+    db.add(db_schedule)
     db.commit()
-    db.refresh(new_schedule)
-    return new_schedule
+    db.refresh(db_schedule)
+
+    return db_schedule
+
 
 @router.put("/{schedule_id}", response_model=schedule_schema.ScheduleResponse)
 def update_schedule(schedule_id: int, updated_schedule: schedule_schema.ScheduleCreate, db: Session = Depends(get_db)):
@@ -99,7 +96,7 @@ def generate_schedule(schedule_id: int, db: Session = Depends(get_db)):
     db_schedule = db.query(Schedule).filter(Schedule.id == schedule_id).first()
     if not db_schedule:
         raise HTTPException(status_code=404, detail="Schedule not found")
-    
+
     people = db_schedule.people
     days = db_schedule.days
 
@@ -124,13 +121,31 @@ def generate_schedule(schedule_id: int, db: Session = Depends(get_db)):
                 ]
             } for p in people
         ],
+
         month=db_schedule.month,
         year=db_schedule.year,
         max_period_per_person=db_schedule.max_period_per_person
     )
 
     generated_schedule = generate_schedule_service(schedule_data)
-    db_schedule.assignments = generated_schedule
+    print("passou aqui", generated_schedule)
+    # Converte nomes (guest) ou IDs (usuários reais)
+    normalized_assignments = {}
+    for day, periods in generated_schedule.items():
+        normalized_assignments[day] = {}
+        for period, persons in periods.items():
+            normalized_list = []
+            for person in persons:
+                # Se o voluntário é um objeto do banco (tem id), usa id
+                db_person = next((p for p in people if p.name == person or f"{p.name} {p.last_name}" == person), None)
+                if db_person:
+                    normalized_list.append(db_person.id)
+                else:
+                    # caso seja um guest, mantemos string
+                    normalized_list.append(person)
+            normalized_assignments[day][period] = normalized_list
+
+    db_schedule.assignments = normalized_assignments
     db.commit()
     db.refresh(db_schedule)
 

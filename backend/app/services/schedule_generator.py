@@ -9,7 +9,7 @@ def generate_schedule(schedule_data: schedule_schema.ScheduleBase):
 
     # --- Preparação dos dados ---
     volunteers = [f"{p.name} {p.last_name}" for p in people]
-
+    # volunteers = [p.id for p in people]
     shifts = []
     people_per_shift = {}
     for d in days:
@@ -58,7 +58,7 @@ def generate_schedule(schedule_data: schedule_schema.ScheduleBase):
 
     for s in shifts:
         required = people_per_shift.get(s, 0)
-        model += lpSum(X[v][s] for v in volunteers) >= required, f"People_per_shift_{s}"
+        model += lpSum(X[v][s] for v in volunteers) <= required, f"People_per_shift_{s}"
 
     for v in volunteers:
         for s in shifts:
