@@ -5,11 +5,12 @@ jobs:
   build:
     runs-on: [self-hosted, linux, x64]
     steps:
+      - run: echo -e "Buildando imagens\n"
       - run: docker compose -f docker-compose.yml build
-      - echo: docker images
       
   deploy:
     runs-on: [self-hosted, linux, x64]
     steps:
+        - run: echo -e "Subindo containers\n"
         - run: docker compose -f docker-compose.yml up -d
 
