@@ -5,11 +5,11 @@ jobs:
   build:
     runs-on: [self-hosted, linux, x64]
     steps:
-      - run: docker compose -f docker-compose.yml --build
-      - run: bats -v
+      - run: docker compose -f docker-compose.yml build
+      - echo: docker images
       
   deploy:
     runs-on: [self-hosted, linux, x64]
     steps:
-        - run: docker compose up
+        - run: docker compose -f docker-compose.yml up -d
 
